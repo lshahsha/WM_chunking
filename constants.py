@@ -4,14 +4,11 @@ import os
 
 # default response keys and the corresponding fingers. Can be modified
 ## first enter the keys for the right hand and then the keys for the left hand
-# response_keys    = ['a', 's', 'd', 'f', 'h', 'j', 'k', 'l']
-response_keys    = ['2', '3', '4', '5', '2', '3', '4', '5']
-response_fingers = ['Index', 'Middle', 'Ring', 'Pinky', 'Index', 'Middle', 'Ring', 'Pinky']
 # change experiment name to a name you've chosen for your own experiment
 experiment_name = 'WM_chunking'
 # change the str inside Path() to a directory of your choise.
 ## make sure 'stimuli' and 'experiment_code' folders are placed within your base_dir
-base_dir        = Path('C:\\Users\\lshah\\OneDrive\\Documents\\Projects').absolute()
+base_dir   = Path('C:\\Users\\lshah\\OneDrive\\Documents\\Projects').absolute()
 
 target_dir = base_dir / experiment_name /"target_files" # contains target files for the task
 raw_dir    = base_dir/ experiment_name / "data"         # This is where the result files are being saved
