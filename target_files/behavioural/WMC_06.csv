@@ -1,0 +1,41 @@
+,hand,trial_dur,iti_dur,run_number,phase_type,phase,display_trial_feedback,feedback_dur,feedback_type,chunk,recall_dir,seq_chunked
+0,right,6,1,6,0,enc,False,0.0,None,2,0,44 12 41
+1,right,None,1,6,1,ret,True,0.5,acc,2,0,** ** **
+2,right,6,1,6,0,enc,False,0.0,None,2,0,34 14 41
+3,right,None,1,6,1,ret,True,0.5,acc,2,0,** ** **
+4,right,6,1,6,0,enc,False,0.0,None,3,0,332 233
+5,right,None,1,6,1,ret,True,0.5,acc,3,0,*** ***
+6,right,6,1,6,0,enc,False,0.0,None,3,1,421 121
+7,right,None,1,6,1,ret,True,0.5,acc,3,1,*** ***
+8,right,6,1,6,0,enc,False,0.0,None,2,1,14 11 41
+9,right,None,1,6,1,ret,True,0.5,acc,2,1,** ** **
+10,right,6,1,6,0,enc,False,0.0,None,2,1,24 41 11
+11,right,None,1,6,1,ret,True,0.5,acc,2,1,** ** **
+12,right,6,1,6,0,enc,False,0.0,None,3,1,144 343
+13,right,None,1,6,1,ret,True,0.5,acc,3,1,*** ***
+14,right,6,1,6,0,enc,False,0.0,None,2,1,23 42 11
+15,right,None,1,6,1,ret,True,0.5,acc,2,1,** ** **
+16,right,6,1,6,0,enc,False,0.0,None,3,1,412 232
+17,right,None,1,6,1,ret,True,0.5,acc,3,1,*** ***
+18,right,6,1,6,0,enc,False,0.0,None,3,1,311 123
+19,right,None,1,6,1,ret,True,0.5,acc,3,1,*** ***
+20,right,6,1,6,0,enc,False,0.0,None,2,1,13 11 24
+21,right,None,1,6,1,ret,True,0.5,acc,2,1,** ** **
+22,right,6,1,6,0,enc,False,0.0,None,3,0,312 432
+23,right,None,1,6,1,ret,True,0.5,acc,3,0,*** ***
+24,right,6,1,6,0,enc,False,0.0,None,2,0,14 34 22
+25,right,None,1,6,1,ret,True,0.5,acc,2,0,** ** **
+26,right,6,1,6,0,enc,False,0.0,None,3,0,342 441
+27,right,None,1,6,1,ret,True,0.5,acc,3,0,*** ***
+28,right,6,1,6,0,enc,False,0.0,None,2,0,21 31 44
+29,right,None,1,6,1,ret,True,0.5,acc,2,0,** ** **
+30,right,6,1,6,0,enc,False,0.0,None,2,1,44 43 13
+31,right,None,1,6,1,ret,True,0.5,acc,2,1,** ** **
+32,right,6,1,6,0,enc,False,0.0,None,3,0,132 124
+33,right,None,1,6,1,ret,True,0.5,acc,3,0,*** ***
+34,right,6,1,6,0,enc,False,0.0,None,3,0,222 331
+35,right,None,1,6,1,ret,True,0.5,acc,3,0,*** ***
+36,right,6,1,6,0,enc,False,0.0,None,2,0,33 12 22
+37,right,None,1,6,1,ret,True,0.5,acc,2,0,** ** **
+38,right,6,1,6,0,enc,False,0.0,None,3,1,234 244
+39,right,None,1,6,1,ret,True,0.5,acc,3,1,*** ***
