@@ -9,5 +9,7 @@ open constants.py and change base_dir to the directory where you want the projec
 
 ## Make target files
 > ipython
+> 
 > from make_target import WMChunking, make_files
+> 
 > make_files(number_of_runs = 8)
