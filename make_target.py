@@ -9,7 +9,7 @@ import constants as consts
 
 class WMChunking():
 
-    def __init__(self, num_repetition = 5, iti_dur = [1, 1], 
+    def __init__(self, num_repetition = 5, iti_dur = [1, 1], item_dur = 1, 
                  run_number = 1, study_name = 'behavioural', 
                  feedback_dur = [0, 0.5], hand = 'right', seq_length = 6):
         """
@@ -22,6 +22,7 @@ class WMChunking():
             feedback_dur : time interval during which feedback is displayed. Enter as a list: [<feedback_dur after encoding> <feedback dur after retrieval>]
             hand : hand used in the experiment (DEFAULT: right)
             seq_length : length of the sequence (DEFAULT: 6)
+            item_dur : duration of time a "memory" item remains on the screen (DEFAULT: 1)
         """
 
         self.num_repetition = num_repetition 
@@ -31,6 +32,7 @@ class WMChunking():
         self.run_number = run_number
         self.hand = hand
         self.seq_length = seq_length
+        self.item_dur = item_dur
 
         # create an empty dataframe 
         self.target_df = pd.DataFrame()
@@ -51,37 +53,25 @@ class WMChunking():
 
         self.target_filedir = self.target_dir / f"{self.target_filename}.csv"
 
-    def generate_random_seq(self, chunk):
+    def generate_random_seq(self):
         """
         generates a random sequence of digits
-        digits are converted to string and added to the list
-        Next, a string with all the digits concatenated is created. A space
-        is appended between chunks!
         """
         self.seq_list = []
         for i in range(self.seq_length):
             self.seq_list.append(str(random.randint(1, 4)))
         
         # concatenate the digits into one string without any spaces in between
-        self.seq_str = ''.join(self.seq_list)
-        
-        # separate chunks
-        str_chunked = [self.seq_str[i:i+chunk] for i in range(0, len(self.seq_str), chunk)]
-        # put spaces in between chunks
-        self.seq_chunked_str = ' '.join(str_chunked)
+        self.seq_str = ' '.join(self.seq_list)
     
-    def generate_masked_seq(self, chunk):
+    def generate_masked_seq(self):
         """
-        generates masked sequence for the chunk
+        generates masked sequence
         """
 
         # first generate the whole sequence
-        masked_seq_all = '*' * self.seq_length
-
-        # separate chunks
-        masked_chunked = [masked_seq_all[i:i+chunk] for i in range(0, len(masked_seq_all), chunk)]
-        # put spaces in between chunks
-        self.masked_chunked_str = ' '.join(masked_chunked)
+        self.seq_masked = '*' * self.seq_length
+        self.seq_masked = ' '.join(self.seq_masked)
 
     def make_trials(self):
 
@@ -100,7 +90,7 @@ class WMChunking():
             self.trial_dict = {}
 
             self.trial_dict['hand'] = [self.hand for i in range(2)]
-            self.trial_dict['trial_dur'] = [6, 'None']
+            self.trial_dict['item_dur'] = [self.item_dur for i in range(2)]
             self.trial_dict['iti_dur'] = self.iti_dur
             self.trial_dict['run_number'] = self.run_number
             self.trial_dict['phase_type'] = [0, 1]
@@ -108,6 +98,7 @@ class WMChunking():
             self.trial_dict['display_trial_feedback'] = [False, True]
             self.trial_dict['feedback_dur'] = self.feedback_dur
             self.trial_dict['feedback_type'] = ['None', 'acc']
+            self.trial_dict['seq_length'] = [self.seq_length for i in range(2)]
 
             # get the type of the current trial
             trial_type_id = self.trials[trial_number]
@@ -116,17 +107,21 @@ class WMChunking():
             # add the info to the dictionary
             self.trial_dict['chunk'] = [trial_type['chunk'] for i in range(2)]
             self.trial_dict['recall_dir'] = [trial_type['recall_dir'] for i in range(2)]
+            
+            # calculate trial duration
+            trial_dur = trial_type['chunk'] * self.item_dur
+            self.trial_dict['trial_dur'] = [trial_dur, 'None']
 
             # generate a sequence of random numbers
-            ## once the following routine is executed, self.seq_list, self.seq_str, and self.seq_chunked_str are created
-            self.generate_random_seq(chunk = trial_type['chunk'])
-            ## add self.seq_chunked_str to the trial dictionary
-            self.trial_dict['seq_chunked'] = []
-            self.trial_dict['seq_chunked'].append(self.seq_chunked_str) # for the encoding phase
+            ## once the following routine is executed, self.seq_list, self.seq_str are created
+            self.generate_random_seq()
+            ## add self.seq_str to the trial dictionary
+            self.trial_dict['seq_str'] = []
+            self.trial_dict['seq_str'].append(self.seq_str) # for the encoding phase
 
             # generate a sequence masked
-            self.generate_masked_seq(chunk = trial_type['chunk'])
-            self.trial_dict['seq_chunked'].append(self.masked_chunked_str) # for the retrieval phase
+            self.generate_masked_seq()
+            self.trial_dict['seq_str'].append(self.seq_masked) # for the retrieval phase
 
             # add the info to the target dataframe
             trial_df = pd.DataFrame(self.trial_dict)
