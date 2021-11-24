@@ -11,10 +11,8 @@ import sys
 
 from psychopy import visual, core, event, gui # data, logging
 
-import experiment_code.constants as consts
-from experiment_code.task_blocks import TASK_MAP
-from experiment_code.ttl import ttl
-from experiment_code.screen import Screen
+import constants as consts
+from screen import Screen
 from psychopy.hardware.emulator import launchScan
 from psychopy.hardware import keyboard
 import pylink as pl # to connect to eyelink
@@ -24,7 +22,8 @@ class Run():
     A general class for a run of the task
     """
 
-    def __init__(self, subject_id, screen_number = 1, eye_flag = False, **kwargs):
+    def __init__(self, subject_id, screen_number = 1, 
+                 run_number = 1, eye_flag = False, **kwargs):
         """
         Args:
             subject_id : id set for the subject. Example: sub-01
@@ -35,6 +34,7 @@ class Run():
         """
 
         self.subject_id = subject_id
+        self.run_number = run_number
         self.eye_flag = eye_flag
         self.__dict__.update(kwargs)
 
@@ -107,6 +107,7 @@ class Run():
             self.run_info.update(**kwargs)
 
         return
+    
     def get_targetfile(self, run_number):
         """
         gets the target file information for the current run
@@ -117,7 +118,9 @@ class Run():
                 target_file    : target csv file opened as a pandas dataframe
         """
         # load the target file
-        self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"WMC_{run_number:02}.csv")
+        # self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"WMC_{run_number:02}.csv")
+        self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"ENC_01.csv")
+
     def start_timer(self):
         """
         starts the timer for the experiment (for behavioral study)
@@ -168,6 +171,7 @@ class Run():
         self.tk.startRecording(1, 1, 1, 1)
         # pl.sendMessageToFile(f"task_name: {self.task_name} start_track: {pl.currentUsec()}")
         return
+    
     def stop_eyetracker(self):
         """
         stop recording
@@ -184,22 +188,311 @@ class Run():
 
     def check_run_results(self):
         """
-        checks if there is a raw data file for the current run
+        Checks if a file for behavioral data of the current run already exists
+        Args:
+            experiment_info(dict)   -   a dictionary with all the info for the experiment (after user inputs info in the GUI)
+        Returns:
+            run_iter    -   how many times this run has been run:)
         """
+        self.run_dir = consts.raw_dir / self.study_name / 'raw' / self.subj_id / f"{self.study_name}_{self.subj_id}.csv"
+        if os.path.isfile(self.run_dir):
+            # load in run_file results if they exist 
+            self.run_file_results = pd.read_csv(self.run_dir)
+            if len(self.run_file_results.query(f'run_name=="{self.run_name}"')) > 0:
+                current_iter = self.run_file_results.query(f'run_name=="{self.run_name}"')['run_iter'].max() # how many times has this run_file been executed?
+                self.run_iter = current_iter+1
+            else:
+                self.run_iter = 1 
+        else:
+            self.run_iter = 1
+            self.run_file_results = pd.DataFrame()
+
+        return
+        
         pass
+    
     def set_run_results(self, all_run_response, save = True):
-        pass
+        """
+        gets the behavioral results of the current run and returns a dataframe to be saved
+        Args:
+            all_run_response(list)    -   list of dictionaries with behavioral results of the current run
+            save(bool)                -   if True, saves the run results. Default: True
+        Returns:
+            run_file_results(pandas dataframe)    -   a dataframe containing behavioral results
+        """
+
+        # save run results 
+        new_df = pd.concat([self.run_info['run_file'], pd.DataFrame.from_records(all_run_response)], axis=1)
+
+        # check if a file with results for the current run already exists
+        self.check_runfile_results()
+        self.run_file_results = pd.concat([self.run_file_results, new_df], axis=0, sort=False)
+
+        # save the run results if save is True
+        if save:
+            self.run_file_results.to_csv(self.run_dir, index=None, header=True)
+
+        return
+    
     def show_scoreboard(self, screen):
         pass
+    
     def init_run(self):
-        pass
+        """
+        initializing the run:
+        making sure a directory is created for the behavioral results
+        getting run file
+        opening a screen to show the stimulus
+        starting the timer
+        """
+
+        # defining new variables corresponding to experiment info (easier for coding)
+        self.run_number = self.run_info['run_number'] 
+        self.subject_id = self.run_info['subject_id']   
+        self.ttl_flag   = self.run_info['ttl_flag']
+        self.eye_flag   = self.run_info['eye_flag']
+
+        # if it's behavioral training then use the files under behavioral
+        if self.run_info['behav_training']:
+            self.study_name = 'behavioural'
+        else:
+            self.study_name = 'fmri'
+
+        # 1. get the target file for the current run
+        self.get_targetfile(self.run_number)
+
+        # 2. make subject folder in data/raw/<subj_id>
+        subject_dir = consts.raw_dir/ self.study_name / 'raw' / self.subject_id
+        consts.dircheck(subject_dir) # making sure the directory is created!
+
+        # 3. check if a file for the result of the run already exists
+        # self.check_runfile_results()
+
+        # 5. start the eyetracker if eyeflag = True
+        if self.eye_flag:
+            self.start_eyetracker()
+
+        # 5. timer stuff!
+        ## start the timer. Needs to know whether the experimenter has chosen to wait for ttl pulse 
+        ## creates self.timer_info
+        self.start_timer()
+
+        # 6. initialize a list for responses
+        self.all_run_response = []
+   
     def end_run(self):
-        pass
+        """
+        finishes the run.
+        converting the log of all responses to a dataframe and saving it
+        showing a scoreboard with results from all the tasks
+        showing a final text and waiting for key to close the stimuli screen
+        """
+
+        self.set_runfile_results(self.all_run_response, save = True)
+
+        # present feedback from all tasks on screen 
+        self.show_scoreboard(self.task_obj_list, self.stimuli_screen)
+
+        # stop the eyetracker
+        if self.eye_flag:
+            self.stop_eyetracker()
+            # get the edf file from Eyelink PC
+            self.tk.receiveDataFile(self.tk_filename, self.tk_filename)
+
+        # end experiment
+        end_exper_text = f"End of run\n\nTake a break!"
+        end_experiment = visual.TextStim(self.stimuli_screen.window, text=end_exper_text, color=[-1, -1, -1])
+        end_experiment.draw()
+        self.stimuli_screen.window.flip()
+
+        # waits for a key press to end the experiment
+        # event.waitKeys()
+        # Make keyboard object
+        kb = keyboard.Keyboard()
+        # Listen for keypresses until escape is pressed
+        keys = kb.getKeys()
+        if 'space' in keys:
+            # quit screen and exit
+            self.stimuli_screen.window.close()
+            core.quit()
     def wait_dur(self):
         pass
-    def run(self):
-        pass
+    def do(self):
+        """
+        do a run of the experiment
+        """
+        print(f"running the experiment")
+        
+        # initialize the run
+        self.init_run()
 
-class Task():
-    def __init__(self) -> None:
+        # create an instance of the task object
+        Task_obj = WMChunking(screen = self.subject_screen, 
+                        target_file = self.targetfile_run,
+                        study_name = 'behavioural', 
+                        save_response = False)
+
+        # run the task
+        Task_obj.run()
+
+class WMChunking():
+    def __init__(self, screen, target_file, 
+                 study_name, save_response = True):
+        
+        self.screen = screen
+        self.window = screen.window
+        self.monitor = screen.monitor
+
+        self.clock = core.Clock()
+        self.save_response = save_response
+
+        self.target_file = target_file
+        self.study_name = study_name
+
+        self.trial_response = {}
+        self.run_response = []
+
+    # helper functions used in main functions for states
+    def _create_chunked_str(self, seq_str, chunk):
+        """
+        creates a chunked version of the sequence to be displayed
+        is used in display_digits routine
+        """
+        seq_list = seq_str.split(" ")
+        seq_chunked_list = []
+        for i in range(0, len(seq_list), chunk):
+            seq_chunked = seq_list[i:i+chunk]
+            seq_chunked_str = ''.join(seq_chunked)
+            seq_chunked_list.append(seq_chunked_str)
+
+        return seq_chunked_list
+    
+    def get_current_trial_time(self):
+        """
+        gets the current time in the trial.
+        """
+        # gets the current time in the trial
+        t_current = self.clock.getTime()
+        return t_current
+    
+    def display_digits(self):
+        """
+        displays the digits during encoding phase
+        The encoding phase 
+        Chunks will be displayed
+                       stay on the screen for a certain amount of time
+                       masked (turn into *)
+        info from the target file this routine needs:
+            chunk (2 or 3)
+            seq_str (string representing digits)
+            trial_dur?
+            item_dur (time duration that a memory item remains on the screen)
+        """
+        # create a list with all the digits
+        ## digits are separated by space 
+        seq_str = self.current_trial['seq_str']
+        chunk = self.current_trial['chunk']
+        item_dur = self.current_trial['item_dur']
+
+        # separate chunks
+        ## create a list rep of the seq string
+        seq_chunked_list = self._create_chunked_str(seq_str, chunk)
+
+        # create a chunked masked string
+        chunk_masked_str = '*' * int(chunk)
+
+        # loop over chunks and display
+        ## initialize a list for seq text objects
+        self.seq_text_obj = [] 
+        ch_idx = 0 # chunk index
+        x_pos = 5 # starting x position for the the sequence. The position is chosen so that the seq is centered on the display
+        text_str = '' # initialize a string to be displayed
+        text_masked_str = '' # initialize a string to contain masked digits
+        for ch in seq_chunked_list:
+            text_str = text_masked_str+ch
+            # get the current time in the trial
+            self.chunk_startTime = self.get_current_trial_time()
+
+            # display each chunk
+            self.seq_text_obj.append(visual.TextStim(self.window, text = text_str, 
+                                                     color = [-1, -1, -1], height = 2, 
+                                                     pos = [x_pos, 0], alignText = 'left'))
+            self.seq_text_obj[ch_idx].draw()
+            self.window.flip()
+            # let it remain on the screen for "item_dur"
+            while self.clock.getTime()-self.chunk_startTime <= item_dur:
+                pass
+
+            # convert all the elements to * and display
+            text_masked_str = text_masked_str + chunk_masked_str
+            self.seq_text_obj[ch_idx] = visual.TextStim(self.window, text = text_masked_str, 
+                                                     color = [-1, -1, -1], height = 2, 
+                                                     pos = [x_pos, 0], alignText = 'left')
+            self.seq_text_obj[ch_idx].draw()
+            self.window.flip()
+
+            # change chunk index and x_pos for the next chunk
+            ch_idx = ch_idx + 1
+
+    def wait_iti(self):
+        """
+        duration of the inter-trial interval
+        Waits here for the iti duration
+        """
+        # get the iti
+        iti_dur = self.current_trial['iti_dur']
+        # get the current time in the trial
+        ## gets here for ITIs so the time corresponds to the end of an event
+        self.iti_startTime = self.get_current_trial_time()
+
+        # wait here for the duration of the iti
+        while self.clock.getTime()-self.iti_startTime <= iti_dur:
+            pass
+
+    def get_response():
+        """
+        recording the subjects' responses during retrieval
+        Shows the masked digits
+        Shows recall direction
+        record pressed keys, press times, reaction time
+        """
         pass
+    
+    def show_trial_feedback():
+        """
+        shows trial feedback
+        Number of points subject gets during the trial:
+            Points are determined based on total number of current digits:
+            +6 (6 correct digits)
+            +5 (5 correct digits)
+            .
+            .
+            .
+        """
+        pass
+    
+    def run(self):
+        """
+        runs the task
+        get the trials from target file and loop over trials
+        """
+        # initialize a list to collect responses from all trials
+        self.all_trial_response = []
+
+        # loop over trials
+        for self.trial_index in self.target_file.index:
+            
+            # get info for the current trial
+            self.current_trial = self.target_file.iloc[self.trial_index]
+
+            # STATE: encoding: show digits
+            self.display_digits()
+
+            # STATE: ITI
+            self.wait_iti()
+
+            # STATE: retrieval: record responses
+
+            # STATE: show trial feedback
+
+            # STATE: ITI
