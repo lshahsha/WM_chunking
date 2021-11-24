@@ -336,37 +336,53 @@ class Run():
         Task_obj.run()
 
 class WMChunking():
+    """
+    Creates an instance of WMChunking class
+    The Run class creates an instance of WMChunking with the proper attributes
+    Args:
+        screen        : subject screen
+        target_file   : the target file containing trial information for a run of the task
+        study_name    : either 'behavioural' or 'fmri'
+        save_response : whether you want to save the responses into a file
+    """
     def __init__(self, screen, target_file, 
                  study_name, save_response = True):
         
-        self.screen = screen
-        self.window = screen.window
-        self.monitor = screen.monitor
+        self.screen         = screen
+        self.window         = screen.window
+        self.monitor        = screen.monitor
+        self.clock          = core.Clock()
+        self.save_response  = save_response
+        self.target_file    = target_file
+        self.study_name     = study_name
+        self.trial_response = {} # a dictionary with the responses for all of the trials
+        self.run_response   = []
 
-        self.clock = core.Clock()
-        self.save_response = save_response
+        # overall points and errors????
 
-        self.target_file = target_file
-        self.study_name = study_name
-
-        self.trial_response = {}
-        self.run_response = []
-
+    # ==================================================
     # helper functions used in main functions for states
     def _create_chunked_str(self, seq_str, chunk):
         """
         creates a chunked version of the sequence to be displayed
         is used in display_digits routine
         """
+        # get the digits of the sequence
+        ## in the target file they were separated by spaces
         seq_list = seq_str.split(" ")
-        seq_chunked_list = []
+
+        seq_chunked_list = [] # a list containing chunked seq as strings
         for i in range(0, len(seq_list), chunk):
-            seq_chunked = seq_list[i:i+chunk]
+            # separate the chunk
+            seq_chunked     = seq_list[i:i+chunk]
+            # put the digits of the chunk together
             seq_chunked_str = ''.join(seq_chunked)
+            # append the chunk to the list
             seq_chunked_list.append(seq_chunked_str)
 
         return seq_chunked_list
-    
+    # ==================================================
+
     def get_current_trial_time(self):
         """
         gets the current time in the trial.
@@ -378,10 +394,8 @@ class WMChunking():
     def display_digits(self):
         """
         displays the digits during encoding phase
-        The encoding phase 
-        Chunks will be displayed
-                       stay on the screen for a certain amount of time
-                       masked (turn into *)
+        Chunks will be displayed stay on the screen for a certain amount of time
+        and then get masked (turn into *)
         info from the target file this routine needs:
             chunk (2 or 3)
             seq_str (string representing digits)
@@ -390,8 +404,8 @@ class WMChunking():
         """
         # create a list with all the digits
         ## digits are separated by space 
-        seq_str = self.current_trial['seq_str']
-        chunk = self.current_trial['chunk']
+        seq_str  = self.current_trial['seq_str']
+        chunk    = self.current_trial['chunk']
         item_dur = self.current_trial['item_dur']
 
         # separate chunks
@@ -402,7 +416,7 @@ class WMChunking():
         chunk_masked_str = '*' * int(chunk)
 
         # loop over chunks and display
-        ## initialize a list for seq text objects
+        ## initialize stuff
         self.seq_text_obj = [] 
         ch_idx = 0 # chunk index
         x_pos = 5 # starting x position for the the sequence. The position is chosen so that the seq is centered on the display
