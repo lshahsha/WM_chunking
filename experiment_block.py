@@ -118,8 +118,8 @@ class Run():
                 target_file    : target csv file opened as a pandas dataframe
         """
         # load the target file
-        # self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"WMC_{run_number:02}.csv")
-        self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"ENC_01.csv")
+        self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"WMC_{run_number:02}.csv")
+        # self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"ENC_01.csv")
 
     def start_timer(self):
         """
@@ -362,26 +362,46 @@ class WMChunking():
 
     # ==================================================
     # helper functions used in main functions for states
-    def _create_chunked_str(self, seq_str, chunk):
+    def _create_chunked_seq(self):
         """
         creates a chunked version of the sequence to be displayed
         is used in display_digits routine
         """
         # get the digits of the sequence
         ## in the target file they were separated by spaces
-        seq_list = seq_str.split(" ")
+        seq_list = self.seq_str.split(" ")
 
-        seq_chunked_list = [] # a list containing chunked seq as strings
-        for i in range(0, len(seq_list), chunk):
+        self.seq_chunked_list = [] # a list containing chunked seq as strings
+        for i in range(0, len(seq_list), self.chunk):
             # separate the chunk
-            seq_chunked     = seq_list[i:i+chunk]
+            seq_chunked     = seq_list[i:i+self.chunk]
             # put the digits of the chunk together
-            seq_chunked_str = ''.join(seq_chunked)
+            seq_chunked_str = ' '.join(seq_chunked)
             # append the chunk to the list
-            seq_chunked_list.append(seq_chunked_str)
-
-        return seq_chunked_list
+            self.seq_chunked_list.append(seq_chunked_str)
+        return 
     # ==================================================
+
+    
+    def init_trial(self):
+        """
+        initialize the trial
+        gets all the necessary information for the current trial
+        """
+        # get the current trial
+        self.current_trial = self.target_file.iloc[self.trial_index]
+
+        # get info for the current trial
+        self.item_dur     = self.current_trial['item_dur']
+        self.iti_dur      = self.current_trial['iti_dur']
+        self.run_number   = self.current_trial['run_number']
+        self.phase_type   = self.current_trial['phase_type']
+        self.feedback_dur = self.current_trial['feedback_dur']
+        self.seq_length   = self.current_trial['seq_length']
+        self.chunk        = self.current_trial['chunk']
+        self.recall_dir   = self.current_trial['recall_dir']
+        self.trial_dur    = self.current_trial['trial_dur']
+        self.seq_str      = self.current_trial['seq_str']
 
     def get_current_trial_time(self):
         """
@@ -391,87 +411,63 @@ class WMChunking():
         t_current = self.clock.getTime()
         return t_current
     
-    def display_digits(self):
+    def phase_encoding(self):
         """
-        displays the digits during encoding phase
-        Chunks will be displayed stay on the screen for a certain amount of time
-        and then get masked (turn into *)
-        info from the target file this routine needs:
-            chunk (2 or 3)
-            seq_str (string representing digits)
-            trial_dur?
-            item_dur (time duration that a memory item remains on the screen)
+        gets here during the encoding phase
+        1. display a big box (rectangular):
+            - encloses the sequence
+            - It's colored red (red to instruct the subject not to press anything!)
+        2. display chunks
+            - determine the chunks first
+            - loop over chunks:
+                - show the chunk
+                - the chunk remains on the screen for a certain amount of time
+                - mask the chunk
+                - a short delay before the next chunk appears? 
         """
-        # create a list with all the digits
-        ## digits are separated by space 
-        seq_str  = self.current_trial['seq_str']
-        chunk    = self.current_trial['chunk']
-        item_dur = self.current_trial['item_dur']
 
-        # separate chunks
-        ## create a list rep of the seq string
-        seq_chunked_list = self._create_chunked_str(seq_str, chunk)
+        # Create a rectangle that will enclose the sequence of digits
+        self.rect_frame = visual.rect.Rect(self.window, width = 10, height = 5, 
+                                           lineWidth = 1, lineColor = 'red', 
+                                           pos = [0, 0])
+        # Divide the sequence into chunks
+        ## once this routine is executed, self.seq_chunked_str is created
+        self._create_chunked_seq()
 
-        # create a chunked masked string
-        chunk_masked_str = '*' * int(chunk)
+        # Loop over chunks
+        self.text_object = []
+        x_pos            = -1
+        chunk_index      = 0
+        text_str         = '' # text string that will be shown
+        text_masked_str  = '' # text string containing masked digist
+        for chunk in self.seq_chunked_list:
+            # display the current chunk
+            self.chunkStartTime = self.get_current_trial_time()
+            text_str    = text_masked_str + chunk
+            text_object = visual.TextStim(self.window, text = text_str, 
+                                          color = 'black', pos = [0, 0], alignText = 'left') 
 
-        # loop over chunks and display
-        ## initialize stuff
-        self.seq_text_obj = [] 
-        ch_idx = 0 # chunk index
-        x_pos = 5 # starting x position for the the sequence. The position is chosen so that the seq is centered on the display
-        text_str = '' # initialize a string to be displayed
-        text_masked_str = '' # initialize a string to contain masked digits
-        for ch in seq_chunked_list:
-            text_str = text_masked_str+ch
-            # get the current time in the trial
-            self.chunk_startTime = self.get_current_trial_time()
+            self.rect_frame.draw()
+            text_object.draw()
+            self.window.flip(clearBuffer = True)
 
-            # display each chunk
-            self.seq_text_obj.append(visual.TextStim(self.window, text = text_str, 
-                                                     color = [-1, -1, -1], height = 2, 
-                                                     pos = [x_pos, 0], alignText = 'left'))
-            self.seq_text_obj[ch_idx].draw()
-            self.window.flip()
-            # let it remain on the screen for "item_dur"
-            while self.clock.getTime()-self.chunk_startTime <= item_dur:
+            # keep it on the screen for item_dur
+            while self.clock.getTime()-self.chunkStartTime <= (self.item_dur - 0.5):
                 pass
-
-            # convert all the elements to * and display
-            text_masked_str = text_masked_str + chunk_masked_str
-            self.seq_text_obj[ch_idx] = visual.TextStim(self.window, text = text_masked_str, 
-                                                     color = [-1, -1, -1], height = 2, 
-                                                     pos = [x_pos, 0], alignText = 'left')
-            self.seq_text_obj[ch_idx].draw()
-            self.window.flip()
-
-            # change chunk index and x_pos for the next chunk
-            ch_idx = ch_idx + 1
-
-    def wait_iti(self):
-        """
-        duration of the inter-trial interval
-        Waits here for the iti duration
-        """
-        # get the iti
-        iti_dur = self.current_trial['iti_dur']
-        # get the current time in the trial
-        ## gets here for ITIs so the time corresponds to the end of an event
-        self.iti_startTime = self.get_current_trial_time()
-
-        # wait here for the duration of the iti
-        while self.clock.getTime()-self.iti_startTime <= iti_dur:
+            
+            # Change it to masked 
+            text_masked_str = text_masked_str + '# '*int(self.chunk)
+            text_object = visual.TextStim(self.window, text = text_masked_str, 
+                                          color = 'black', pos = [0, 0], alignText = 'left')
+            self.rect_frame.draw() 
+            text_object.draw()
+            self.window.flip(clearBuffer = True)
+            # a short delay
+            self.chunkEndTime = self.get_current_trial_time()
+            while self.clock.getTime()-self.chunkEndTime <= (0.5):
+                pass
             pass
 
-    def get_response():
-        """
-        recording the subjects' responses during retrieval
-        Shows the masked digits
-        Shows recall direction
-        record pressed keys, press times, reaction time
-        """
-        pass
-    
     def show_trial_feedback():
         """
         shows trial feedback
@@ -485,6 +481,15 @@ class WMChunking():
         """
         pass
     
+    def wait_iti(self):
+        """
+        waits here for the duration of iti
+        """
+        iti_startTime = self.get_current_trial_time()
+        while self.clock.getTime()-iti_startTime <= self.iti_dur:
+            pass
+
+    
     def run(self):
         """
         runs the task
@@ -496,11 +501,12 @@ class WMChunking():
         # loop over trials
         for self.trial_index in self.target_file.index:
             
+            print(f"trial number {self.trial_index}")
             # get info for the current trial
-            self.current_trial = self.target_file.iloc[self.trial_index]
+            self.init_trial()
 
             # STATE: encoding: show digits
-            self.display_digits()
+            self.phase_encoding()
 
             # STATE: ITI
             self.wait_iti()
