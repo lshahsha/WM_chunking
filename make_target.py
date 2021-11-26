@@ -9,7 +9,7 @@ import constants as consts
 
 class WMChunking():
 
-    def __init__(self, num_repetition = 5, iti_dur = [1, 1], item_dur = 1, 
+    def __init__(self, num_repetition = 5, iti_dur = [1, 1], item_dur = 2, 
                  run_number = 1, study_name = 'behavioural', 
                  feedback_dur = [0, 0.5], hand = 'right', seq_length = 6):
         """
@@ -70,7 +70,7 @@ class WMChunking():
         """
 
         # first generate the whole sequence
-        self.seq_masked = '*' * self.seq_length
+        self.seq_masked = '#' * self.seq_length
         self.seq_masked = ' '.join(self.seq_masked)
 
     def make_trials(self):
