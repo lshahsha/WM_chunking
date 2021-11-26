@@ -370,6 +370,9 @@ class WMChunking():
         # get the digits of the sequence
         ## in the target file they were separated by spaces
         seq_list = self.seq_str.split(" ")
+        # create a variable containing correct presses
+        ## this will be used later in the retrieval routine
+        self.seq_correct = seq_list.copy()
 
         self.seq_chunked_list = [] # a list containing chunked seq as strings
         for i in range(0, len(seq_list), self.chunk):
@@ -382,12 +385,20 @@ class WMChunking():
         return 
     # ==================================================
 
-    
     def init_trial(self):
         """
         initialize the trial
         gets all the necessary information for the current trial
         """
+        # initialize some variables
+        self.trial_points    = 0     # the number of points the participant gets for the trial
+        self.is_error        = False # will set to True only if no error is made
+        self.response        = []    # will contain the pressed keys
+        self.response_time   = []    # will contain the times of presses
+        self.number_response = 0     # will contain the number of presses made. Each time a press is detected, this is incremented
+        self.number_correct  = 0     # will be the numbere of correct ore
+        # self.movement_time  = []    # will contain the movement time of the trial
+
         # get the current trial
         self.current_trial = self.target_file.iloc[self.trial_index]
 
@@ -402,6 +413,7 @@ class WMChunking():
         self.recall_dir   = self.current_trial['recall_dir']
         self.trial_dur    = self.current_trial['trial_dur']
         self.seq_str      = self.current_trial['seq_str']
+        self.seq_list     = self.seq_str.split(" ")
 
     def get_current_trial_time(self):
         """
@@ -427,7 +439,7 @@ class WMChunking():
         """
 
         # Create a rectangle that will enclose the sequence of digits
-        self.rect_frame = visual.rect.Rect(self.window, width = 10, height = 5, 
+        self.rect_frame = visual.rect.Rect(self.window, width = 8, height = 2, 
                                            lineWidth = 1, lineColor = 'red', 
                                            pos = [0, 0])
         # Divide the sequence into chunks
@@ -436,7 +448,7 @@ class WMChunking():
 
         # Loop over chunks
         self.text_object = []
-        x_pos            = -1
+        x_pos            = 0
         chunk_index      = 0
         text_str         = '' # text string that will be shown
         text_masked_str  = '' # text string containing masked digist
@@ -445,7 +457,7 @@ class WMChunking():
             self.chunkStartTime = self.get_current_trial_time()
             text_str    = text_masked_str + chunk
             text_object = visual.TextStim(self.window, text = text_str, 
-                                          color = 'black', pos = [0, 0], alignText = 'left') 
+                                          color = 'black', pos = [5, 0], alignText = 'left') 
 
             self.rect_frame.draw()
             text_object.draw()
@@ -458,7 +470,7 @@ class WMChunking():
             # Change it to masked 
             text_masked_str = text_masked_str + '# '*int(self.chunk)
             text_object = visual.TextStim(self.window, text = text_masked_str, 
-                                          color = 'black', pos = [0, 0], alignText = 'left')
+                                          color = 'black', pos = [5, 0], alignText = 'left')
             self.rect_frame.draw() 
             text_object.draw()
             self.window.flip(clearBuffer = True)
@@ -466,8 +478,83 @@ class WMChunking():
             self.chunkEndTime = self.get_current_trial_time()
             while self.clock.getTime()-self.chunkEndTime <= (0.5):
                 pass
-            pass
 
+    def phase_retrieval(self):
+        """
+        gets here during the retrieval phase
+        1. change the color of the big box to green 
+        2. draw a box (blue/yellow) to the left of the big box
+            - this box determines whether it's backwards or forwards recall
+        3. show the masked sequence of digits
+        4. records and check responses made: response, response_time
+            - an immediate feedback is given based on the response 
+                correct response: green
+                wrong response: red
+
+        """
+
+        # change the color of the big box to green
+        self.rect_frame.lineColor = 'green'
+
+        # create a filled box to instruct the recall direction
+        if self.recall_dir == 0: # backwards recall
+            box_color = 'blue'
+        elif self.recall_dir == 1: # forwards recall
+            box_color = 'yellow'
+            
+        self.rect_rd = visual.rect.Rect(self.window, width = 2, height = 2, 
+                                        lineWidth = 1, lineColor = box_color, 
+                                        fillColor = box_color, 
+                                        pos = [-5, 0])
+
+        # display the masked sequence
+        text_seq_object = visual.TextStim(self.window, text = self.seq_str, 
+                                          color = 'black', pos = [5, 0], alignText = 'left')
+
+        self.rect_frame.draw()
+        self.rect_rd.draw()
+        text_seq_object.draw()
+        self.window.flip(clearBuffer = True)
+
+        # flip the sequence if it's a backwards condition
+        if self.recall_dir == 0:
+            self.seq_correct.reverse()
+
+        # while the sequence is not finished, wait for responses from the subject
+        while self.number_response<self.seq_length:
+            # record presses
+            press = event.getKeys(timeStamped=self.clock) # records the pressed key
+            if len(press)>0: # a press has been made`
+                # self.pressed_digits.append(self._get_press_digit(press[0][0])) # the pressed key is converted to its corresponding digit and appended to the list
+                self.response.append(press[0][0]) # get the pressed key
+                self.response_time.append(press[0][1])  # get the time of press for the key
+                try:
+                    if self.response[self.number_response] == self.seq_correct[self.number_response]: # the press is correct
+                        self.number_correct = self.number_correct + 1
+                        self.trial_points  += 1
+                        self.seq_text_object[self.number_response].setColor('green')
+
+                        # self.seq_text_obj[self.number_press].setColor([-1, 1, -1]) # set the color of the corresponding digit to green
+                        # self._digit_feedback_color() # calls the function that sets the "immediate feedback color" of the digit
+                    else: # the press is incorrect
+                        # at least one wrong press is made and the trial is considered ERROR
+                        self.is_error = True
+                        self.seq_text_object[self.number_response].setColor('red')
+                        # self.seq_text_obj[self.number_press].setColor([1, -1, -1]) # set the color of the corresponding digit to red
+                        # self._digit_feedback_color()
+                except IndexError: # if the number of presses exceeds the length of the threshold
+                    self.correct_response = False
+                finally:
+                    # print("GOT YOUR RESPONSE")
+                    print(f"you have made {self.number_correct} correct presses")
+                    self.number_response = self.number_response + 1 # a press has been made => increase the number of presses
+    
+        # test_startTime = self.get_current_trial_time() # get the time before iti starts
+        # while self.clock.getTime()-test_startTime <= 8:
+        #     # stays here for the duration of the iti
+        #     pass
+        pass
+    
     def show_trial_feedback():
         """
         shows trial feedback
@@ -485,11 +572,11 @@ class WMChunking():
         """
         waits here for the duration of iti
         """
-        iti_startTime = self.get_current_trial_time()
+        iti_startTime = self.get_current_trial_time() # get the time before iti starts
         while self.clock.getTime()-iti_startTime <= self.iti_dur:
+            # stays here for the duration of the iti
             pass
 
-    
     def run(self):
         """
         runs the task
@@ -505,13 +592,17 @@ class WMChunking():
             # get info for the current trial
             self.init_trial()
 
-            # STATE: encoding: show digits
-            self.phase_encoding()
+            if self.phase_type == 0: # encoding
+                # STATE: encoding: show digits
+                self.phase_encoding()
+            elif self.phase_type == 1: # retrieval
+                # STATE: retrieval: record responses
+                self.phase_retrieval()
 
             # STATE: ITI
             self.wait_iti()
 
-            # STATE: retrieval: record responses
+            
 
             # STATE: show trial feedback
 
