@@ -13,6 +13,11 @@ base_dir   = Path('C:\\Users\\lshah\\OneDrive\\Documents\\Projects').absolute()
 target_dir = base_dir / experiment_name /"target_files" # contains target files for the task
 raw_dir    = base_dir/ experiment_name / "data"         # This is where the result files are being saved
 
+# setting some defaults for the stimuli presentation
+width_object = 8
+height_object = 2
+height_text = 1
+
 def dircheck(path2dir):
     """
     Checks if a directory exists! if it does not exist, it creates it
