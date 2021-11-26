@@ -23,8 +23,7 @@ class Run():
     A general class for a run of the task
     """
 
-    def __init__(self, subject_id, screen_number = 1, 
-                 run_number = 1, eye_flag = False, **kwargs):
+    def __init__(self, subject_id, screen_number = 1):
         """
         Args:
             subject_id : id set for the subject. Example: sub-01
@@ -35,100 +34,16 @@ class Run():
         """
 
         self.subject_id = subject_id
-        self.run_number = run_number
-        # self.eye_flag = eye_flag
-        self.__dict__.update(kwargs)
+        # self.run_number = run_number
+        # self.__dict__.update(kwargs)
 
         # open up a screen and display fixation
         ## you can set the resolution of the subject screen here: (check screen code)
         self.subject_screen = Screen(screen_number = screen_number)
-
-        # # connect to the eyetracker already
-        # if self.eye_flag:
-        #     # create an Eyelink class
-        #     ## the default ip address is 100.1.1.1.
-        #     ## in the ethernet settings of the laptop, 
-        #     ## set the ip address of the EyeLink ethernet connection 
-        #     ## to 100.1.1.2 and the subnet mask to 255.255.255.0
-        #     self.tk = pl.EyeLink('100.1.1.1')
-        
-    def set_experiment_info(self, **kwargs):
-        """
-        setting the info for the experiment:
-
-        Is it behavioral training?
-        what is the run number?
-        what is the subject_id?
-        does it need to wait for ttl pulse? (for fmri it does)
-
-        The following parameters will be set:
-        behav_trianing  - is it behavioral training or scanning?
-            ** behavioral training target/run files are always stored under behavioral and scanning files are under fmri  
-        run_number      - run number 
-        ttl_flag        - should the program wait for the ttl pulse or not? For scanning THIS FLAG HAS TO BE SET TO TRUE
-
-        Args:
-        debug (bool)    -   if True, uses default names and info for testing, otherwise, a dialogue box will pop up
-        ** When debugging, most things are hard-coded. So you will need to change them here if you want to see how the code works
-           for different values of these variables
-        """
-        if not kwargs['debug']:
-            # a dialogue box pops up so you can enter info
-            # set up input box
-            inputDlg = gui.Dlg(title = f"{self.subject_id}")
-            inputDlg.addField('Enter Run Number (int):')      # run number (int)
-            # inputDlg.addField('Is it a training session?', initial = True) # true for behavioral and False for fmri
-            # inputDlg.addField('Wait for TTL pulse?', initial = True) # a checkbox for ttl pulse (set it true for scanning)
-
-            inputDlg.show()
-
-            # record user inputs
-            self.run_info = {}
-            if gui.OK:
-                self.run_info['subject_id']     = self.subject_id
-                self.run_info['run_number']     = int(inputDlg.data[0])
-                # self.run_info['behav_training'] = bool(inputDlg.data[1])
-
-                # # ttl flag that will be used to determine whether the program waits for ttl pulse or not
-                # self.run_info['ttl_flag'] = bool(inputDlg.data[2])
-                # self.run_info['eye_flag'] = self.eye_flag
-
-            else:
-                sys.exit()
-        else: 
-            print("running in debug mode")
-            # pass on the values for your debugging with the following keywords
-            self.run_info = {
-                'subject_id': 'test00',
-                'run_number': 1,
-                # 'behav_training': True,
-                # 'ttl_flag': False, 
-                # 'eye_flag': False
-            }
-            self.run_info.update(**kwargs)
-
-        return
     
-    def get_targetfile(self, run_number):
-        """
-        gets the target file information for the current run
-        Args:
-            run_number : number assigned to the current run
-        Returns:
-            target_taskInfo(dict)  -   a dictionary containing target file info for the task
-                target_file    : target csv file opened as a pandas dataframe
-        """
-        # load the target file
-        self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"WMC_{run_number:02}.csv")
-        # self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"ENC_01.csv")
-
-    def check_run_results(self):
+    def get_run_results(self):
         """
         Checks if a file for behavioral data of the current run already exists
-        Args:
-            experiment_info(dict)   -   a dictionary with all the info for the experiment (after user inputs info in the GUI)
-        Returns:
-            run_iter    -   how many times this run has been run:)
         """
         self.run_dir = consts.raw_dir / self.study_name / 'raw' / self.subject_id / f"WMC_{self.subject_id}.csv"
         if os.path.isfile(self.run_dir):
@@ -141,6 +56,9 @@ class Run():
         return
     
     def show_scoreboard(self):
+        """
+        Shows the final scoreboard for the run
+        """
 
         # get the dataframe for the current run
         run_df = self.run_file_results.loc[self.run_file_results['run_number'] == self.run_number]
@@ -159,7 +77,7 @@ class Run():
         feedback_text.draw()
         self.subject_screen.window.flip()
     
-    def init_run(self):
+    def init_run(self, debug = False, **kwargs):
         """
         initializing the run:
         making sure a directory is created for the behavioral results
@@ -168,40 +86,44 @@ class Run():
         starting the timer
         """
 
+        # get info from the user
+        if not debug:
+            # a dialogue box pops up so you can enter info
+            # set up input box
+            inputDlg = gui.Dlg(title = f"{self.subject_id}")
+            inputDlg.addField('Enter Run Number (int):')      # run number (int)
+            # inputDlg.addField('Is it a training session?', initial = True) # true for behavioral and False for fmri
+        
+            inputDlg.show()
+
+            # record user inputs
+            self.run_info = {}
+            if gui.OK:
+                self.run_info['subject_id']     = self.subject_id
+                self.run_info['run_number']     = int(inputDlg.data[0])
+
+            else:
+                sys.exit()
+        else: 
+            print("running in debug mode")
+            # pass on the values for your debugging with the following keywords
+            self.run_info = {
+                'subject_id': 'test00',
+                'run_number': 1,
+            }
+            self.run_info.update(**kwargs)
+
         # defining new variables corresponding to experiment info (easier for coding)
         self.run_number = self.run_info['run_number'] 
         self.subject_id = self.run_info['subject_id']   
-        # self.ttl_flag   = self.run_info['ttl_flag']
-        # self.eye_flag   = self.run_info['eye_flag']
-
-        # if it's behavioral training then use the files under behavioral
-        # if self.run_info['behav_training']:
-        #     self.study_name = 'behavioural'
-        # else:
-        #     self.study_name = 'fmri'
         self.study_name = 'behavioural'
 
-        # 1. get the target file for the current run
-        self.get_targetfile(self.run_number)
-
-        # 2. make subject folder in data/raw/<subj_id>
+        # make subject folder in data/raw/<subject_id>
         subject_dir = consts.raw_dir/ self.study_name / 'raw' / self.subject_id
         consts.dircheck(subject_dir) # making sure the directory is created!
 
-        # 3. check if a file for the result of the run already exists
-        # self.check_runfile_results()
-
-        # # 5. start the eyetracker if eyeflag = True
-        # if self.eye_flag:
-        #     self.start_eyetracker()
-
-        # 5. timer stuff!
-        ## start the timer. Needs to know whether the experimenter has chosen to wait for ttl pulse 
-        ## creates self.timer_info
-        # self.start_timer()
-
-        # 6. initialize a list for responses
-        # self.all_run_response = []
+        # load the target file
+        self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"WMC_{self.run_number:02}.csv")
    
     def end_run(self):
         """
@@ -224,19 +146,18 @@ class Run():
         # Listen for keypresses until escape is pressed
         keys = kb.getKeys()
         if 'space' in keys:
-            # print(f"quiting")
             # quit screen and exit
             self.subject_screen.window.close()
             core.quit()
     
-    def do(self):
+    def do(self, debug = False):
         """
         do a run of the experiment
         """
         print(f"running the experiment")
         
         # initialize the run
-        self.init_run()
+        self.init_run(debug = debug)
 
         # create an instance of the task object
         Task_obj = WMChunking(screen = self.subject_screen, 
@@ -249,7 +170,8 @@ class Run():
         Task_obj.run()
 
         # check if run file results already exists
-        self.check_run_results()
+        ## load it if it exists
+        self.get_run_results()
 
         # append the results of the current run 
         self.run_file_results = pd.concat([self.run_file_results, Task_obj.response_df], axis = 0)
@@ -436,10 +358,6 @@ class WMChunking():
                                         fillColor = box_color, 
                                         pos = [-5, 0])
 
-        # # display the masked sequence
-        # text_seq_object = visual.TextStim(self.window, text = self.seq_str, 
-        #                                   color = 'black', pos = [5, 0], alignText = 'left')
-
         # flip the sequence if it's a backwards condition
         if self.recall_dir == 0:
             self.seq_correct.reverse()
@@ -465,7 +383,6 @@ class WMChunking():
             # record presses
             press = event.getKeys(timeStamped=self.clock) # records the pressed key
             if len(press)>0: # a press has been made`
-                # self.pressed_digits.append(self._get_press_digit(press[0][0])) # the pressed key is converted to its corresponding digit and appended to the list
                 self.response.append(press[0][0]) # get the pressed key
                 self.response_time.append(press[0][1])  # get the time of press for the key
 
@@ -583,3 +500,8 @@ class WMChunking():
 
             # STATE: ITI
             self.wait_iti()
+
+# do a run of the experiment
+def main(subject_id, debug = False):
+    Run_Block = Run(subject_id = subject_id)
+    Run_Block.do(debug = debug)
