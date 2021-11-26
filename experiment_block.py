@@ -122,71 +122,6 @@ class Run():
         self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"WMC_{run_number:02}.csv")
         # self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"ENC_01.csv")
 
-    def start_timer(self):
-        """
-        starts the timer for the experiment (for behavioral study)
-        Returns:
-            timer_info(dict)    -   a dictionary with all the info for the timer. keys are:
-            global_clock : the clock from psychopy?
-            t0           : the start time
-        """
-        #initialize a dictionary with timer info
-        self.timer_info = {}
-
-        # # wait for ttl pulse or not?
-        # if self.ttl_flag: # if true then wait
-            
-        #     ttl.reset()
-        #     while ttl.count <= 0:
-        #         # print out the text to the screen
-        #         ttl_wait_text = f"Waiting for the scanner\n"
-        #         ttl_wait_ = visual.TextStim(self.stimuli_screen.window, text=ttl_wait_text, 
-        #                                         pos=(0.0,0.0), color=self.stimuli_screen.window.rgb + 0.5, units='deg')
-        #         ttl.check()
-            
-        #         ttl_wait_.draw()
-        #         self.stimuli_screen.window.flip()
-
-        #     # print(f"Received TTL pulse")
-        #     # get the ttl clock
-        #     self.timer_info['global_clock'] = ttl.clock
-        # else:
-        #     self.timer_info['global_clock'] = core.Clock()
-        self.timer_info['global_clock'] = core.Clock()
-        self.timer_info['t0'] = self.timer_info['global_clock'].getTime()
-
-    def start_eyetracker(self):
-        """
-        sets up a connection with the eyetracker and start recording eye position
-        """
-        
-        # opening an edf file to store eye recordings
-        ## the file name should not have too many characters (<=8?)
-        ### get the run number
-        self.tk_filename = f"{self.subject_id}_r{self.run_number}.edf"
-        self.tk.openDataFile(self.tk_filename)
-        # set the sampling rate for the eyetracker
-        ## you can set it to 500 or 250 
-        self.tk.sendCommand("sample_rate  500")
-        # start eyetracking and send a text message to tag the start of the file
-        self.tk.startRecording(1, 1, 1, 1)
-        # pl.sendMessageToFile(f"task_name: {self.task_name} start_track: {pl.currentUsec()}")
-        return
-    
-    def stop_eyetracker(self):
-        """
-        stop recording
-        close edf file
-        receive edf file?
-            - receiving the edf file takes time and might be problematic during scanning
-            maybe it would be better to take the edf files from eyelink host computer afterwards
-        """
-        self.tk.stopRecording()
-        self.tk.closeDataFile()
-        # self.tk.receiveDataFile(self.tk_filename, self.tk_filename)
-        self.tk.close()
-        return
-
     def check_run_results(self):
         """
         Checks if a file for behavioral data of the current run already exists
@@ -202,29 +137,6 @@ class Run():
         else:
             self.run_iter = 1
             self.run_file_results = pd.DataFrame()
-
-        return
-    
-    def set_run_results(self, all_run_response, save = True):
-        """
-        gets the behavioral results of the current run and returns a dataframe to be saved
-        Args:
-            all_run_response(list)    -   list of dictionaries with behavioral results of the current run
-            save(bool)                -   if True, saves the run results. Default: True
-        Returns:
-            run_file_results(pandas dataframe)    -   a dataframe containing behavioral results
-        """
-
-        # save run results 
-        new_df = pd.concat([self.run_info['run_file'], pd.DataFrame.from_records(all_run_response)], axis=1)
-
-        # check if a file with results for the current run already exists
-        self.check_runfile_results()
-        self.run_file_results = pd.concat([self.run_file_results, new_df], axis=0, sort=False)
-
-        # save the run results if save is True
-        if save:
-            self.run_file_results.to_csv(self.run_dir, index=None, header=True)
 
         return
     
@@ -286,10 +198,10 @@ class Run():
         # 5. timer stuff!
         ## start the timer. Needs to know whether the experimenter has chosen to wait for ttl pulse 
         ## creates self.timer_info
-        self.start_timer()
+        # self.start_timer()
 
         # 6. initialize a list for responses
-        self.all_run_response = []
+        # self.all_run_response = []
    
     def end_run(self):
         """
@@ -350,7 +262,6 @@ class Run():
 
         # end the run
         self.end_run()
-
 class WMChunking():
     """
     Creates an instance of WMChunking class
