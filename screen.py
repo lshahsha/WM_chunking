@@ -33,7 +33,7 @@ class Screen:
         monitor.setSizePix(self.size) # screen size (not window!) look in display prefs 
         monitor.saveMon()
         return monitor
-
+    
     def fixation_cross(self):
         #fixation cross
         fixation = visual.ShapeStim(self.window, 
