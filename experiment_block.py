@@ -194,7 +194,7 @@ class Run():
         Returns:
             run_iter    -   how many times this run has been run:)
         """
-        self.run_dir = consts.raw_dir / self.study_name / 'raw' / self.subj_id / f"{self.study_name}_{self.subj_id}.csv"
+        self.run_dir = consts.raw_dir / self.study_name / 'raw' / self.subject_id / f"WMC_{self.subject_id}.csv"
         if os.path.isfile(self.run_dir):
             # load in run_file results if they exist 
             self.run_file_results = pd.read_csv(self.run_dir)
@@ -208,8 +208,6 @@ class Run():
             self.run_file_results = pd.DataFrame()
 
         return
-        
-        pass
     
     def set_run_results(self, all_run_response, save = True):
         """
@@ -315,8 +313,10 @@ class Run():
             # quit screen and exit
             self.stimuli_screen.window.close()
             core.quit()
+    
     def wait_dur(self):
         pass
+    
     def do(self):
         """
         do a run of the experiment
@@ -330,10 +330,20 @@ class Run():
         Task_obj = WMChunking(screen = self.subject_screen, 
                         target_file = self.targetfile_run,
                         study_name = 'behavioural', 
+                        run_number = self.run_number, 
                         save_response = False)
 
         # run the task
         Task_obj.run()
+
+        # check if run file results already exists
+        self.check_run_results()
+
+        # append the results of the current run 
+        self.run_file_results = pd.concat([self.run_file_results, Task_obj.response_df], axis = 0)
+
+        # save the results
+        self.run_file_results.to_csv(self.run_dir)
 
 class WMChunking():
     """
@@ -345,7 +355,7 @@ class WMChunking():
         study_name    : either 'behavioural' or 'fmri'
         save_response : whether you want to save the responses into a file
     """
-    def __init__(self, screen, target_file, 
+    def __init__(self, screen, target_file, run_number, 
                  study_name, save_response = True):
         
         self.screen         = screen
@@ -356,6 +366,7 @@ class WMChunking():
         self.target_file    = target_file
         self.study_name     = study_name
         self.trial_response = {} # a dictionary with the responses for all of the trials
+        self.run_number     = run_number
         self.run_response   = []
 
         # overall points and errors????
@@ -414,6 +425,8 @@ class WMChunking():
         self.trial_dur    = self.current_trial['trial_dur']
         self.seq_str      = self.current_trial['seq_str']
         self.seq_list     = self.seq_str.split(" ")
+
+        self.display_trial_feedback = self.current_trial['display_trial_feedback']
 
     def get_current_trial_time(self):
         """
@@ -490,7 +503,6 @@ class WMChunking():
             - an immediate feedback is given based on the response 
                 correct response: green
                 wrong response: red
-
         """
 
         # change the color of the big box to green
@@ -507,18 +519,29 @@ class WMChunking():
                                         fillColor = box_color, 
                                         pos = [-5, 0])
 
-        # display the masked sequence
-        text_seq_object = visual.TextStim(self.window, text = self.seq_str, 
-                                          color = 'black', pos = [5, 0], alignText = 'left')
-
-        self.rect_frame.draw()
-        self.rect_rd.draw()
-        text_seq_object.draw()
-        self.window.flip(clearBuffer = True)
+        # # display the masked sequence
+        # text_seq_object = visual.TextStim(self.window, text = self.seq_str, 
+        #                                   color = 'black', pos = [5, 0], alignText = 'left')
 
         # flip the sequence if it's a backwards condition
         if self.recall_dir == 0:
             self.seq_correct.reverse()
+
+        # create text objects for each element in the sequence
+        xpos = 5 # initial x position for the text
+        idx  = 0 # index within the sequence
+        self.seq_text_object = []
+        for item in self.seq_list:
+            # create a text object for each element within the sequence
+            self.seq_text_object.append(visual.TextStim(self.window, text = item, 
+                                        color = 'black', pos = [xpos, 0], alignText = 'left'))
+            self.seq_text_object[idx].draw()
+            idx +=1
+            xpos = xpos + 0.855 # this floating point number was determined by trial and error
+            self.rect_frame.draw()
+            self.rect_rd.draw()
+
+        self.window.flip(clearBuffer = True)
 
         # while the sequence is not finished, wait for responses from the subject
         while self.number_response<self.seq_length:
@@ -528,34 +551,42 @@ class WMChunking():
                 # self.pressed_digits.append(self._get_press_digit(press[0][0])) # the pressed key is converted to its corresponding digit and appended to the list
                 self.response.append(press[0][0]) # get the pressed key
                 self.response_time.append(press[0][1])  # get the time of press for the key
+
+                # seq_index is defined to handle the backwards conditions
+                ## in backwards conditions, the color change (based on response)
+                ## starts from the right
+                if self.recall_dir == 0: # if it is a backwards recall
+                    self.seq_index = self.seq_length - self.number_response - 1
+                elif self.recall_dir == 1: # if it is a forwards recall
+                    self.seq_index = self.number_response
+                
                 try:
                     if self.response[self.number_response] == self.seq_correct[self.number_response]: # the press is correct
                         self.number_correct = self.number_correct + 1
                         self.trial_points  += 1
-                        self.seq_text_object[self.number_response].setColor('green')
-
-                        # self.seq_text_obj[self.number_press].setColor([-1, 1, -1]) # set the color of the corresponding digit to green
-                        # self._digit_feedback_color() # calls the function that sets the "immediate feedback color" of the digit
+                        
+                        item_color = 'green'
                     else: # the press is incorrect
                         # at least one wrong press is made and the trial is considered ERROR
                         self.is_error = True
-                        self.seq_text_object[self.number_response].setColor('red')
-                        # self.seq_text_obj[self.number_press].setColor([1, -1, -1]) # set the color of the corresponding digit to red
-                        # self._digit_feedback_color()
+
+                        item_color = 'red'
+                    # changing the color based on the response:
+                    ## correct: green
+                    ## wrong: red
+                    self.seq_text_object[self.seq_index].setColor(item_color)
+                    self.seq_text_object[self.seq_index].draw()
+                    for obj in self.seq_text_object:
+                        obj.draw()
+                        self.rect_frame.draw()
+                        self.rect_rd.draw()
+                    self.window.flip(clearBuffer = True)
                 except IndexError: # if the number of presses exceeds the length of the threshold
                     self.correct_response = False
                 finally:
-                    # print("GOT YOUR RESPONSE")
-                    print(f"you have made {self.number_correct} correct presses")
                     self.number_response = self.number_response + 1 # a press has been made => increase the number of presses
     
-        # test_startTime = self.get_current_trial_time() # get the time before iti starts
-        # while self.clock.getTime()-test_startTime <= 8:
-        #     # stays here for the duration of the iti
-        #     pass
-        pass
-    
-    def show_trial_feedback():
+    def show_trial_feedback(self):
         """
         shows trial feedback
         Number of points subject gets during the trial:
@@ -566,14 +597,27 @@ class WMChunking():
             .
             .
         """
-        pass
+        # display the trial feedback
+        trial_feedback = visual.TextStim(self.window, text = f"+{self.trial_points}", 
+                                        color = 'black', pos = [0, 0])
+
+        # keep the feedbacl on the screen
+        trial_feedback.draw()
+        self.rect_frame.draw()
+        self.rect_rd.draw()
+        self.window.flip(clearBuffer = True)
+
+        feedback_startTime = self.get_current_trial_time() # get the time before iti starts
+        while self.clock.getTime()-feedback_startTime <= self.iti_dur:
+            # stays here for the duration of the feedback_dur
+            pass
     
     def wait_iti(self):
         """
         waits here for the duration of iti
         """
         iti_startTime = self.get_current_trial_time() # get the time before iti starts
-        while self.clock.getTime()-iti_startTime <= self.iti_dur:
+        while self.clock.getTime()-iti_startTime <= self.feedback_dur:
             # stays here for the duration of the iti
             pass
 
@@ -584,9 +628,13 @@ class WMChunking():
         """
         # initialize a list to collect responses from all trials
         self.all_trial_response = []
+        self.response_df = pd.DataFrame()
 
         # loop over trials
         for self.trial_index in self.target_file.index:
+
+            # initialize a dictionary to record trial responses
+            # self.trial_response = {}
             
             print(f"trial number {self.trial_index}")
             # get info for the current trial
@@ -595,15 +643,28 @@ class WMChunking():
             if self.phase_type == 0: # encoding
                 # STATE: encoding: show digits
                 self.phase_encoding()
+                movement_time = 0 # no press/movement is made
             elif self.phase_type == 1: # retrieval
                 # STATE: retrieval: record responses
                 self.phase_retrieval()
+                # calculate movement time: time beteween first and last press
+                movement_time = self.response_time[-1] - self.response_time[0]
+
+            # append the recorded responses to the datafarme for the trial
+            self.trial_response = self.current_trial.to_frame().T
+
+            self.trial_response['response']      = [self.response]
+            self.trial_response['response_time'] = [self.response_time]
+            self.trial_response['MT'] = movement_time
+            self.trial_response['is_error'] = self.is_error
+            self.trial_response['number_correct'] = self.number_correct
+
+            self.response_df = pd.concat([self.response_df, self.trial_response])
+
+            # STATE: show feedback
+            if self.display_trial_feedback:
+                # feedback is only shown if this flag is set to True in the target file
+                self.show_trial_feedback()
 
             # STATE: ITI
             self.wait_iti()
-
-            
-
-            # STATE: show trial feedback
-
-            # STATE: ITI
