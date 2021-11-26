@@ -15,6 +15,7 @@ import constants as consts
 from screen import Screen
 from psychopy.hardware.emulator import launchScan
 from psychopy.hardware import keyboard
+from psychopy import core
 import pylink as pl # to connect to eyelink
 
 class Run():
@@ -35,21 +36,21 @@ class Run():
 
         self.subject_id = subject_id
         self.run_number = run_number
-        self.eye_flag = eye_flag
+        # self.eye_flag = eye_flag
         self.__dict__.update(kwargs)
 
         # open up a screen and display fixation
         ## you can set the resolution of the subject screen here: (check screen code)
         self.subject_screen = Screen(screen_number = screen_number)
 
-        # connect to the eyetracker already
-        if self.eye_flag:
-            # create an Eyelink class
-            ## the default ip address is 100.1.1.1.
-            ## in the ethernet settings of the laptop, 
-            ## set the ip address of the EyeLink ethernet connection 
-            ## to 100.1.1.2 and the subnet mask to 255.255.255.0
-            self.tk = pl.EyeLink('100.1.1.1')
+        # # connect to the eyetracker already
+        # if self.eye_flag:
+        #     # create an Eyelink class
+        #     ## the default ip address is 100.1.1.1.
+        #     ## in the ethernet settings of the laptop, 
+        #     ## set the ip address of the EyeLink ethernet connection 
+        #     ## to 100.1.1.2 and the subnet mask to 255.255.255.0
+        #     self.tk = pl.EyeLink('100.1.1.1')
         
     def set_experiment_info(self, **kwargs):
         """
@@ -76,8 +77,8 @@ class Run():
             # set up input box
             inputDlg = gui.Dlg(title = f"{self.subject_id}")
             inputDlg.addField('Enter Run Number (int):')      # run number (int)
-            inputDlg.addField('Is it a training session?', initial = True) # true for behavioral and False for fmri
-            inputDlg.addField('Wait for TTL pulse?', initial = True) # a checkbox for ttl pulse (set it true for scanning)
+            # inputDlg.addField('Is it a training session?', initial = True) # true for behavioral and False for fmri
+            # inputDlg.addField('Wait for TTL pulse?', initial = True) # a checkbox for ttl pulse (set it true for scanning)
 
             inputDlg.show()
 
@@ -86,11 +87,11 @@ class Run():
             if gui.OK:
                 self.run_info['subject_id']     = self.subject_id
                 self.run_info['run_number']     = int(inputDlg.data[0])
-                self.run_info['behav_training'] = bool(inputDlg.data[1])
+                # self.run_info['behav_training'] = bool(inputDlg.data[1])
 
-                # ttl flag that will be used to determine whether the program waits for ttl pulse or not
-                self.run_info['ttl_flag'] = bool(inputDlg.data[2])
-                self.run_info['eye_flag'] = self.eye_flag
+                # # ttl flag that will be used to determine whether the program waits for ttl pulse or not
+                # self.run_info['ttl_flag'] = bool(inputDlg.data[2])
+                # self.run_info['eye_flag'] = self.eye_flag
 
             else:
                 sys.exit()
@@ -100,9 +101,9 @@ class Run():
             self.run_info = {
                 'subject_id': 'test00',
                 'run_number': 1,
-                'behav_training': True,
-                'ttl_flag': False, 
-                'eye_flag': False
+                # 'behav_training': True,
+                # 'ttl_flag': False, 
+                # 'eye_flag': False
             }
             self.run_info.update(**kwargs)
 
@@ -132,26 +133,26 @@ class Run():
         #initialize a dictionary with timer info
         self.timer_info = {}
 
-        # wait for ttl pulse or not?
-        if self.ttl_flag: # if true then wait
+        # # wait for ttl pulse or not?
+        # if self.ttl_flag: # if true then wait
             
-            ttl.reset()
-            while ttl.count <= 0:
-                # print out the text to the screen
-                ttl_wait_text = f"Waiting for the scanner\n"
-                ttl_wait_ = visual.TextStim(self.stimuli_screen.window, text=ttl_wait_text, 
-                                                pos=(0.0,0.0), color=self.stimuli_screen.window.rgb + 0.5, units='deg')
-                ttl.check()
+        #     ttl.reset()
+        #     while ttl.count <= 0:
+        #         # print out the text to the screen
+        #         ttl_wait_text = f"Waiting for the scanner\n"
+        #         ttl_wait_ = visual.TextStim(self.stimuli_screen.window, text=ttl_wait_text, 
+        #                                         pos=(0.0,0.0), color=self.stimuli_screen.window.rgb + 0.5, units='deg')
+        #         ttl.check()
             
-                ttl_wait_.draw()
-                self.stimuli_screen.window.flip()
+        #         ttl_wait_.draw()
+        #         self.stimuli_screen.window.flip()
 
-            # print(f"Received TTL pulse")
-            # get the ttl clock
-            self.timer_info['global_clock'] = ttl.clock
-        else:
-            self.timer_info['global_clock'] = core.Clock()
-        
+        #     # print(f"Received TTL pulse")
+        #     # get the ttl clock
+        #     self.timer_info['global_clock'] = ttl.clock
+        # else:
+        #     self.timer_info['global_clock'] = core.Clock()
+        self.timer_info['global_clock'] = core.Clock()
         self.timer_info['t0'] = self.timer_info['global_clock'].getTime()
 
     def start_eyetracker(self):
@@ -198,11 +199,6 @@ class Run():
         if os.path.isfile(self.run_dir):
             # load in run_file results if they exist 
             self.run_file_results = pd.read_csv(self.run_dir)
-            if len(self.run_file_results.query(f'run_name=="{self.run_name}"')) > 0:
-                current_iter = self.run_file_results.query(f'run_name=="{self.run_name}"')['run_iter'].max() # how many times has this run_file been executed?
-                self.run_iter = current_iter+1
-            else:
-                self.run_iter = 1 
         else:
             self.run_iter = 1
             self.run_file_results = pd.DataFrame()
@@ -232,8 +228,24 @@ class Run():
 
         return
     
-    def show_scoreboard(self, screen):
-        pass
+    def show_scoreboard(self):
+
+        # get the dataframe for the current run
+        run_df = self.run_file_results.loc[self.run_file_results['run_number'] == self.run_number]
+
+        # calculate median movement time
+        median_MT = run_df['MT'].median()
+
+        # calculate % correct
+        percent_correct = (1 - ((run_df['is_error'].sum())/len(run_df.index)))*100
+
+        # display feedback
+        feedback_string = f"% correct {percent_correct:0.2f}\n\nMT {median_MT:0.2f}"
+        feedback_text = visual.TextStim(self.subject_screen.window, text = feedback_string, 
+                                        color = 'black', pos = [0, 2], alignText = 'center')
+
+        feedback_text.draw()
+        self.subject_screen.window.flip()
     
     def init_run(self):
         """
@@ -247,14 +259,15 @@ class Run():
         # defining new variables corresponding to experiment info (easier for coding)
         self.run_number = self.run_info['run_number'] 
         self.subject_id = self.run_info['subject_id']   
-        self.ttl_flag   = self.run_info['ttl_flag']
-        self.eye_flag   = self.run_info['eye_flag']
+        # self.ttl_flag   = self.run_info['ttl_flag']
+        # self.eye_flag   = self.run_info['eye_flag']
 
         # if it's behavioral training then use the files under behavioral
-        if self.run_info['behav_training']:
-            self.study_name = 'behavioural'
-        else:
-            self.study_name = 'fmri'
+        # if self.run_info['behav_training']:
+        #     self.study_name = 'behavioural'
+        # else:
+        #     self.study_name = 'fmri'
+        self.study_name = 'behavioural'
 
         # 1. get the target file for the current run
         self.get_targetfile(self.run_number)
@@ -266,9 +279,9 @@ class Run():
         # 3. check if a file for the result of the run already exists
         # self.check_runfile_results()
 
-        # 5. start the eyetracker if eyeflag = True
-        if self.eye_flag:
-            self.start_eyetracker()
+        # # 5. start the eyetracker if eyeflag = True
+        # if self.eye_flag:
+        #     self.start_eyetracker()
 
         # 5. timer stuff!
         ## start the timer. Needs to know whether the experimenter has chosen to wait for ttl pulse 
@@ -285,37 +298,24 @@ class Run():
         showing a scoreboard with results from all the tasks
         showing a final text and waiting for key to close the stimuli screen
         """
-
-        self.set_runfile_results(self.all_run_response, save = True)
-
-        # present feedback from all tasks on screen 
-        self.show_scoreboard(self.task_obj_list, self.stimuli_screen)
-
-        # stop the eyetracker
-        if self.eye_flag:
-            self.stop_eyetracker()
-            # get the edf file from Eyelink PC
-            self.tk.receiveDataFile(self.tk_filename, self.tk_filename)
-
         # end experiment
-        end_exper_text = f"End of run\n\nTake a break!"
-        end_experiment = visual.TextStim(self.stimuli_screen.window, text=end_exper_text, color=[-1, -1, -1])
-        end_experiment.draw()
-        self.stimuli_screen.window.flip()
+        # end_exper_text = f"End of run\n\nTake a break!"
+        # end_experiment = visual.TextStim(self.subject_screen.window, text=end_exper_text, color=[-1, -1, -1])
+        # end_experiment.draw()
+        # self.subject_screen.window.flip()
 
         # waits for a key press to end the experiment
-        # event.waitKeys()
+        event.waitKeys()
         # Make keyboard object
         kb = keyboard.Keyboard()
+        print(f"ending the run")
         # Listen for keypresses until escape is pressed
         keys = kb.getKeys()
         if 'space' in keys:
+            # print(f"quiting")
             # quit screen and exit
-            self.stimuli_screen.window.close()
+            self.subject_screen.window.close()
             core.quit()
-    
-    def wait_dur(self):
-        pass
     
     def do(self):
         """
@@ -328,10 +328,10 @@ class Run():
 
         # create an instance of the task object
         Task_obj = WMChunking(screen = self.subject_screen, 
-                        target_file = self.targetfile_run,
-                        study_name = 'behavioural', 
-                        run_number = self.run_number, 
-                        save_response = False)
+                              target_file = self.targetfile_run,
+                              study_name = 'behavioural', 
+                              run_number = self.run_number, 
+                              save_response = False)
 
         # run the task
         Task_obj.run()
@@ -344,6 +344,12 @@ class Run():
 
         # save the results
         self.run_file_results.to_csv(self.run_dir)
+
+        # show scoreboard
+        self.show_scoreboard()
+
+        # end the run
+        self.end_run()
 
 class WMChunking():
     """
@@ -632,9 +638,6 @@ class WMChunking():
 
         # loop over trials
         for self.trial_index in self.target_file.index:
-
-            # initialize a dictionary to record trial responses
-            # self.trial_response = {}
             
             print(f"trial number {self.trial_index}")
             # get info for the current trial
@@ -653,10 +656,11 @@ class WMChunking():
             # append the recorded responses to the datafarme for the trial
             self.trial_response = self.current_trial.to_frame().T
 
-            self.trial_response['response']      = [self.response]
-            self.trial_response['response_time'] = [self.response_time]
-            self.trial_response['MT'] = movement_time
-            self.trial_response['is_error'] = self.is_error
+            self.trial_response['response']       = [self.response]
+            self.trial_response['response_time']  = [self.response_time]
+            self.trial_response['MT']             = movement_time
+            self.trial_response['run_number']     = self.run_number
+            self.trial_response['is_error']       = self.is_error
             self.trial_response['number_correct'] = self.number_correct
 
             self.response_df = pd.concat([self.response_df, self.trial_response])
