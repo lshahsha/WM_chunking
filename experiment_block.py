@@ -334,8 +334,8 @@ class WMChunking():
             self.window.flip(clearBuffer = True)
             # a short delay
             self.chunkEndTime = self.get_current_trial_time()
-            while self.clock.getTime()-self.chunkEndTime <= (0.5):
-                pass
+            # while self.clock.getTime()-self.chunkEndTime <= (0.5):
+            #     pass
 
     def phase_retrieval(self):
         """
