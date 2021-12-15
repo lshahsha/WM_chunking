@@ -34,8 +34,6 @@ class Run():
         """
 
         self.subject_id = subject_id
-        # self.run_number = run_number
-        # self.__dict__.update(kwargs)
 
         # open up a screen and display fixation
         ## you can set the resolution of the subject screen here: (check screen code)
@@ -64,13 +62,23 @@ class Run():
         run_df = self.run_file_results.loc[self.run_file_results['run_number'] == self.run_number]
 
         # calculate median movement time
-        median_MT = run_df['MT'].median()
+        # median_MT = run_df['MT'].median()
+        # mode_MT = run_df['MT'].mode()
+        mean_MT = run_df['MT'].mean()
 
         # calculate % correct
         percent_correct = (1 - ((run_df['is_error'].sum())/len(run_df.index)))*100
 
+        # calculate total points for the current run
+        total_points = run_df['points'].sum()
+
+        # incorporating movement time into the pointing system
+        ## if on average the movement time is below 8 seconds, double the points
+        if mean_MT <= 8:
+            total_points = total_points*2
+
         # display feedback
-        feedback_string = f"% correct {percent_correct:0.2f}\n\nMT {median_MT:0.2f}"
+        feedback_string = f"Total points: {total_points}\n\n% correct {percent_correct:0.2f}\n\nMT {mean_MT:0.2f}"
         feedback_text = visual.TextStim(self.subject_screen.window, text = feedback_string, 
                                         color = 'black', pos = [0, 2], alignText = 'center')
 
@@ -80,10 +88,9 @@ class Run():
     def init_run(self, debug = False, **kwargs):
         """
         initializing the run:
-        making sure a directory is created for the behavioral results
-        getting run file
-        opening a screen to show the stimulus
-        starting the timer
+        Asking the user to input the run number
+        Checking if there is already a file with the behavioural data for the subject
+        Opening the target file for the current run
         """
 
         # get info from the user
@@ -129,7 +136,6 @@ class Run():
         """
         finishes the run.
         converting the log of all responses to a dataframe and saving it
-        showing a scoreboard with results from all the tasks
         showing a final text and waiting for key to close the stimuli screen
         """
         # end experiment
@@ -316,7 +322,7 @@ class WMChunking():
             self.window.flip(clearBuffer = True)
 
             # keep it on the screen for item_dur
-            while self.clock.getTime()-self.chunkStartTime <= (self.item_dur - 0.5):
+            while self.clock.getTime()-self.chunkStartTime <= (self.item_dur):
                 pass
             
             # Change it to masked 
@@ -419,7 +425,12 @@ class WMChunking():
                     self.correct_response = False
                 finally:
                     self.number_response = self.number_response + 1 # a press has been made => increase the number of presses
-    
+
+                    # if all the digits are retrieved correctly, 
+                    # participant recieves extra points:
+                    if self.number_correct == self.seq_length:
+                        self.trial_points = 10
+
     def show_trial_feedback(self):
         """
         shows trial feedback
@@ -490,6 +501,7 @@ class WMChunking():
             self.trial_response['run_number']     = self.run_number
             self.trial_response['is_error']       = self.is_error
             self.trial_response['number_correct'] = self.number_correct
+            self.trial_response['points']         = self.trial_points
 
             self.response_df = pd.concat([self.response_df, self.trial_response])
 
