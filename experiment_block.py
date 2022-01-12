@@ -130,7 +130,8 @@ class Run():
         consts.dircheck(subject_dir) # making sure the directory is created!
 
         # load the target file
-        self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"WMC_{self.run_number:02}.csv")
+        ## the dataframe is read with index_col = [0] option to avoid the Unnamed: 0 column added to the dataframe
+        self.targetfile_run = pd.read_csv(consts.target_dir/ self.study_name / f"WMC_{self.run_number:02}.csv", index_col=[0])
    
     def end_run(self):
         """
@@ -183,7 +184,7 @@ class Run():
         self.run_file_results = pd.concat([self.run_file_results, Task_obj.response_df], axis = 0)
 
         # save the results
-        self.run_file_results.to_csv(self.run_dir)
+        self.run_file_results.to_csv(self.run_dir, index = False)
 
         # show scoreboard
         self.show_scoreboard()
@@ -246,6 +247,8 @@ class WMChunking():
         initialize the trial
         gets all the necessary information for the current trial
         """
+        # reset the timer
+        self.clock.reset()
         # initialize some variables
         self.trial_points    = 0     # the number of points the participant gets for the trial
         self.is_error        = False # will set to True only if no error is made
@@ -256,7 +259,7 @@ class WMChunking():
         # self.movement_time  = []    # will contain the movement time of the trial
 
         # get the current trial
-        self.current_trial = self.target_file.iloc[self.trial_index]
+        self.current_trial = self.target_file.loc[self.trial_index]
 
         # get info for the current trial
         self.item_dur     = self.current_trial['item_dur']
@@ -503,6 +506,9 @@ class WMChunking():
             self.trial_response['number_correct'] = self.number_correct
             self.trial_response['points']         = self.trial_points
 
+            # add the trial index as the first column
+            self.trial_response.insert(loc=0, column='TN', value=self.trial_index)
+            
             self.response_df = pd.concat([self.response_df, self.trial_response])
 
             # STATE: show feedback
