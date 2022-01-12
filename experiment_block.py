@@ -497,17 +497,17 @@ class WMChunking():
 
             # append the recorded responses to the datafarme for the trial
             self.trial_response = self.current_trial.to_frame().T
+            print(self.trial_response)
 
             self.trial_response['response']       = [self.response]
             self.trial_response['response_time']  = [self.response_time]
             self.trial_response['MT']             = movement_time
-            self.trial_response['run_number']     = self.run_number
             self.trial_response['is_error']       = self.is_error
             self.trial_response['number_correct'] = self.number_correct
             self.trial_response['points']         = self.trial_points
 
             # add the trial index as the first column
-            self.trial_response.insert(loc=0, column='TN', value=self.trial_index)
+            self.trial_response.insert(loc = 0, column='TN', value=self.trial_index)
             
             self.response_df = pd.concat([self.response_df, self.trial_response])
 
