@@ -1,0 +1,17 @@
+,hand,item_dur,iti_dur,run_number,phase_type,phase,display_trial_feedback,feedback_dur,feedback_type,seq_length,chunk,recall_dir,trial_dur,seq_str
+0,right,2,1,1,0,enc,False,0.0,None,6,3,1,6,2 2 2 4 4 3
+1,right,2,1,1,1,ret,True,0.5,acc,6,3,1,None,# # # # # #
+2,right,2,1,1,0,enc,False,0.0,None,6,3,1,6,1 3 1 3 1 2
+3,right,2,1,1,1,ret,True,0.5,acc,6,3,1,None,# # # # # #
+4,right,2,1,1,0,enc,False,0.0,None,6,3,0,6,4 1 4 3 4 3
+5,right,2,1,1,1,ret,True,0.5,acc,6,3,0,None,# # # # # #
+6,right,2,1,1,0,enc,False,0.0,None,6,2,1,4,4 3 4 1 4 4
+7,right,2,1,1,1,ret,True,0.5,acc,6,2,1,None,# # # # # #
+8,right,2,1,1,0,enc,False,0.0,None,6,2,0,4,4 1 3 3 1 4
+9,right,2,1,1,1,ret,True,0.5,acc,6,2,0,None,# # # # # #
+10,right,2,1,1,0,enc,False,0.0,None,6,2,0,4,1 3 4 2 2 2
+11,right,2,1,1,1,ret,True,0.5,acc,6,2,0,None,# # # # # #
+12,right,2,1,1,0,enc,False,0.0,None,6,3,0,6,4 1 1 1 4 3
+13,right,2,1,1,1,ret,True,0.5,acc,6,3,0,None,# # # # # #
+14,right,2,1,1,0,enc,False,0.0,None,6,2,1,4,1 2 3 4 3 1
+15,right,2,1,1,1,ret,True,0.5,acc,6,2,1,None,# # # # # #

@@ -8,7 +8,7 @@ import os
 experiment_name = 'WM_chunking'
 # change the str inside Path() to a directory of your choise.
 ## make sure 'stimuli' and 'experiment_code' folders are placed within your base_dir
-base_dir   = Path('C:\\Users\\lshah\\OneDrive\\Documents\\Projects').absolute()
+base_dir   = Path('C:\\Users\\khash\\OneDrive\\Documents\\GitHub').absolute()
 
 target_dir = base_dir / experiment_name /"target_files" # contains target files for the task
 raw_dir    = base_dir/ experiment_name / "data"         # This is where the result files are being saved
